@@ -93,6 +93,39 @@ class sptensor(tensor_mixin):
         else:
             self.shape = tuple(int(d) for d in shape)
         self.ndim = len(subs)
+    
+    def slice(self, dim, i):
+        '''
+        Returns the i-th slice of the tensor in the dim-mode of the tensor.
+        '''
+
+        #checking if the slice is in the range of the dimension
+        if i >= self.shape[dim]:
+            raise IndexError('Index out of range for dimension %s' % str(dim))
+
+        s = []
+
+        for idx, x in enumerate(self.subs[dim]):
+            if x == i:
+                s.append(self.vals[idx])
+            
+        return np.array(s)   
+        #s = filter(lambda x: x[dim] == i, s.subs)
+
+    def save_npz(self, fname):
+        '''
+        Saves sparse tensor to a file
+        '''
+
+        arrays_dict = {}
+        for i in range(len(self.subs)):
+            arrays_dict[i] = self.subs[i]
+        arrays_dict['vals'] = self.vals
+        arrays_dict['shape'] = self.shape
+        arrays_dict['dtype'] = self.dtype
+       
+        np.savez(fname, arrays_dict)
+
 
     def __eq__(self, other):
         if isinstance(other, sptensor):
@@ -358,7 +391,6 @@ class unfolded_sptensor(coo_matrix):
         nsubs = [z.flatten() for z in hsplit(nsubs, len(self.ten_shape))]
         return sptensor(tuple(nsubs), self.data, self.ten_shape)
 
-
 def fromarray(A):
     """Create a sptensor from a dense numpy array"""
     subs = np.nonzero(A)
@@ -397,3 +429,19 @@ def _build_idx(subs, vals, dims, tshape):
     else:
         idx = ravel_multi_index(tuple(subs[i] for i in dims), shape)
     return idx
+
+def load_npz(fname):
+    '''
+    Loads sparse tensor from a file
+    '''
+
+    loaded = np.load(fname)['arr_0'].item()
+
+    subs = []
+
+    for i in loaded.keys():
+        if type(i) is not int:
+            continue
+        subs.append(loaded[i])
+    
+    return sptensor(tuple(subs), loaded['vals'], shape=loaded['shape'], dtype=loaded['dtype'])
