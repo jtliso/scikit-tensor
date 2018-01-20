@@ -319,6 +319,37 @@ class sptensor(tensor_mixin):
         A.put(ravel_multi_index(self.subs, tuple(self.shape)), self.vals)
         return A
 
+    def slice_toarray(self, dim, i):
+        #checking if the slice is in the range of the dimension
+        if i >= self.shape[dim]:
+            raise IndexError('Index out of range for dimension %s' % str(dim))
+
+        subs = []
+        vals = []
+
+        newshape = []
+        for idx, s in enumerate(self.shape):
+            if idx == dim:
+                continue
+            newshape.append(s)
+            subs.append([])
+
+        for idx, x in enumerate(self.subs[dim]):
+            if x == i:
+                k = 0
+                #adding the coordinates of the non-current dimension
+                for j in range(len(self.subs)):
+                    if j == dim:
+                        continue
+                    subs[k].append(self.subs[j][idx])
+                    k += 1
+                vals.append(self.vals[idx])
+
+        A = zeros(newshape)
+        A.put(ravel_multi_index(tuple(subs), tuple(newshape)), vals)
+            
+        return A
+
 
 class unfolded_sptensor(coo_matrix):
     """
