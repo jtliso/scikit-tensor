@@ -23,7 +23,7 @@ from sktensor.core import tensor_mixin
 from sktensor.utils import accum
 from sktensor.dtensor import unfolded_dtensor
 from sktensor.pyutils import inherit_docstring_from, from_to_without
-
+from scipy.stats.mstats import mquantiles
 
 __all__ = [
     'concatenate',
@@ -103,14 +103,9 @@ class sptensor(tensor_mixin):
         if i >= self.shape[dim]:
             raise IndexError('Index out of range for dimension %s' % str(dim))
 
-        s = []
-
-        for idx, x in enumerate(self.subs[dim]):
-            if x == i:
-                s.append(self.vals[idx])
-            
-        return np.array(s)   
-        #s = filter(lambda x: x[dim] == i, s.subs)
+        ind = np.where(np.array(self.subs[dim]) == i)[0]
+        s = self.vals[ind]
+        return s 
 
     def save_npz(self, fname):
         '''
@@ -334,21 +329,35 @@ class sptensor(tensor_mixin):
             newshape.append(s)
             subs.append([])
 
-        for idx, x in enumerate(self.subs[dim]):
-            if x == i:
-                k = 0
-                #adding the coordinates of the non-current dimension
-                for j in range(len(self.subs)):
-                    if j == dim:
-                        continue
-                    subs[k].append(self.subs[j][idx])
-                    k += 1
-                vals.append(self.vals[idx])
+        ind = np.where(np.array(self.subs[dim]) == i)[0]
+        vals = self.vals[ind]
+        
+        for idx, x in enumerate(ind):
+            k = 0
+            #adding the coordinates of the non-current dimension
+            for j in range(len(self.subs)):
+                if j == dim:
+                    continue
+                subs[k].append(self.subs[j][idx])
+                k += 1
 
         A = zeros(newshape)
         A.put(ravel_multi_index(tuple(subs), tuple(newshape)), vals)
             
         return A
+
+    def map_to_quantiles(self, dim, probs=[.025, .25, .5, .75, .995]):
+        '''
+        maps the values in the desired dimension to the quantiles
+        '''
+
+        #get all values in each slice of dimension
+        for i in range(self.shape[dim]):
+            val_indices = np.where(np.array(self.subs[dim]) == i)[0]
+            quants = mquantiles(self.vals[val_indices], prob=probs)
+            self.vals[val_indices] = np.digitize(self.vals[val_indices], quants)
+
+        self.vals += 1
 
 
 class unfolded_sptensor(coo_matrix):
