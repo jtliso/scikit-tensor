@@ -329,21 +329,9 @@ class sptensor(tensor_mixin):
             newshape.append(s)
             subs.append([])
 
-<<<<<<< HEAD
         ind = np.where(np.array(self.subs[dim]) == i)[0]
         vals = self.vals[ind]
         
-        for idx, x in enumerate(ind):
-            k = 0
-            #adding the coordinates of the non-current dimension
-            for j in range(len(self.subs)):
-                if j == dim:
-                    continue
-                subs[k].append(self.subs[j][idx])
-                k += 1
-=======
-        ind = np.where(np.array(self.subs[dim] == i))[0]
-        vals = self.vals[ind]
         for idx in ind:
             k = 0
             for j in range(len(self.subs)):
@@ -352,8 +340,6 @@ class sptensor(tensor_mixin):
                   subs[k].append(self.subs[j][idx])
                   k += 1
             #vals.append(self.vals[idx])
->>>>>>> sandbox
-
         A = zeros(newshape)
         A.put(ravel_multi_index(tuple(subs), tuple(newshape)), vals)
             
