@@ -106,6 +106,20 @@ class sptensor(tensor_mixin):
         ind = np.where(np.array(self.subs[dim]) == i)[0]
         s = self.vals[ind]
         return s 
+     
+    def delete(self, dim, i):
+        '''
+        Deletes values in the ith slice of dim
+        '''
+        
+        #checking if the slice is in the range of the dimension
+        if i >= self.shape[dim]:
+            raise IndexError('Index out of range for dimension %s' % str(dim))
+
+        ind = np.where(np.array(self.subs[dim]) == i)[0]
+        
+        #deleting the values
+        self.vals[ind] = 0
 
     def save_npz(self, fname):
         '''
@@ -331,7 +345,16 @@ class sptensor(tensor_mixin):
 
         ind = np.where(np.array(self.subs[dim]) == i)[0]
         vals = self.vals[ind]
+
+        j = 0
+        for idx, s in enumerate(self.shape):
+          if idx == dim:
+            continue
+          subs[j] = np.array(self.subs[idx])[ind]
+          j+=1
         
+
+        ''' 
         for idx in ind:
             k = 0
             for j in range(len(self.subs)):
@@ -340,6 +363,38 @@ class sptensor(tensor_mixin):
                   subs[k].append(self.subs[j][idx])
                   k += 1
             #vals.append(self.vals[idx])
+        '''
+
+        A = zeros(newshape)
+        A.put(ravel_multi_index(tuple(subs), tuple(newshape)), vals)
+            
+        return A
+
+    def slice_range_toarray(self, dim, begin, end):
+        subs = []
+        vals = []
+        window = end-begin
+
+        newshape = []
+        for idx, s in enumerate(self.shape):
+            subs.append([])
+            if idx == dim:
+               newshape.append(window)
+               continue
+            newshape.append(s)
+
+
+        for i in range(begin, end):
+            ind = np.where(np.array(self.subs[dim]) == i)[0]
+            vals.extend(self.vals[ind])
+
+            for idx, s in enumerate(self.shape):
+                if idx == dim:
+                  y = [x%window for x in np.array(self.subs[idx])[ind]]
+                  subs[idx].extend(np.array(y))
+                  continue
+                subs[idx].extend(np.array(self.subs[idx])[ind])
+        
         A = zeros(newshape)
         A.put(ravel_multi_index(tuple(subs), tuple(newshape)), vals)
             
